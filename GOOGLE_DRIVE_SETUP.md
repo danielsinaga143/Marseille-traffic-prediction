@@ -12,13 +12,26 @@ Upload model 3GB ke Google Drive dan auto-download saat Railway startup.
 - Login dengan akun Google Anda
 
 ### 2. Upload File Model
-Upload 3 file ini:
+Upload 3 file ini ke Google Drive:
 
+#### File Wajib (untuk semua fitur):
 ```
-✅ traffic_model_time_location.pkl (3GB) - Model Random Forest
-✅ model_encoders_revised.pkl (3KB) - Encoders
-✅ marseille_clean.csv (197MB) - Data traffic (optional)
+✅ detectors_public.csv (2.5MB) - Sudah di GitHub ✓
+✅ sensor_predictions_2026-01-02.csv (147KB) - Sudah di GitHub ✓
+✅ clustering_models_comparison.csv (1KB) - Sudah di GitHub ✓
 ```
+
+#### File Google Drive (terlalu besar untuk GitHub):
+```
+🔵 marseille_clean.csv (197MB) - Data traffic WAJIB
+🔵 traffic_model_time_location.pkl (3GB) - Model Random Forest (opsional)
+🔵 model_encoders_revised.pkl (3KB) - Encoders (opsional)
+```
+
+**Prioritas Upload:**
+1. **marseille_clean.csv** ← WAJIB (tanpa ini app crash)
+2. traffic_model_time_location.pkl ← Opsional (untuk tab Random Forest)
+3. model_encoders_revised.pkl ← Opsional (untuk tab Random Forest)
 
 **Cara upload:**
 1. Klik **"New"** → **"File upload"**

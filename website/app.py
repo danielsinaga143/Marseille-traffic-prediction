@@ -109,15 +109,22 @@ except Exception as e:
 # Load Traffic Data for historical patterns
 traffic_df = None
 detector_hourly_avg = None
+marseille_csv_path = os.path.join(BASE_PATH, 'marseille_clean.csv')
+
 try:
-    traffic_df = pd.read_csv(os.path.join(BASE_PATH, 'marseille_clean.csv'))
-    traffic_df['datetime'] = pd.to_datetime(traffic_df['datetime'])
-    traffic_df['hour'] = traffic_df['datetime'].dt.hour
-    traffic_df['day_of_week'] = traffic_df['datetime'].dt.dayofweek
-    
-    # Pre-compute hourly averages per detector
-    detector_hourly_avg = traffic_df.groupby(['detid', 'hour', 'day_of_week'])['occ'].mean().reset_index()
-    detector_hourly_avg.columns = ['detid', 'hour', 'day_of_week', 'avg_occ']
+    # Try to load or download marseille_clean.csv from Google Drive
+    if ensure_model_exists(marseille_csv_path, GDRIVE_MARSEILLE_DATA):
+        traffic_df = pd.read_csv(marseille_csv_path)
+        traffic_df['datetime'] = pd.to_datetime(traffic_df['datetime'])
+        traffic_df['hour'] = traffic_df['datetime'].dt.hour
+        traffic_df['day_of_week'] = traffic_df['datetime'].dt.dayofweek
+        
+        # Pre-compute hourly averages per detector
+        detector_hourly_avg = traffic_df.groupby(['detid', 'hour', 'day_of_week'])['occ'].mean().reset_index()
+        detector_hourly_avg.columns = ['detid', 'hour', 'day_of_week', 'avg_occ']
+        print(f"✓ Traffic data loaded: {len(traffic_df)} records")
+    else:
+        print("⚠ marseille_clean.csv not available (set GDRIVE_MARSEILLE_DATA env variable)")
     
     print(f"✓ Traffic data loaded: {len(traffic_df):,} records")
 except Exception as e:
