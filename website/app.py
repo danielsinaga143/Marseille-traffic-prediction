@@ -115,7 +115,7 @@ try:
 except Exception as e:
     print(f"⚠ Detectors not found: {e}")
 
-# Load Traffic Data for historical patterns
+# Load Traffic Data for historical patterns (SAMPLE ONLY - save memory)
 traffic_df = None
 detector_hourly_avg = None
 marseille_csv_path = os.path.join(BASE_PATH, 'marseille_clean.csv')
@@ -123,7 +123,9 @@ marseille_csv_path = os.path.join(BASE_PATH, 'marseille_clean.csv')
 try:
     # Try to load or download marseille_clean.csv from Google Drive
     if ensure_model_exists(marseille_csv_path, GDRIVE_MARSEILLE_DATA):
-        traffic_df = pd.read_csv(marseille_csv_path)
+        # Load only 20% sample to save memory (Railway 512MB RAM limit)
+        print("⚠ Loading sample data (20%) to conserve memory...")
+        traffic_df = pd.read_csv(marseille_csv_path, skiprows=lambda i: i > 0 and i % 5 != 0)
         traffic_df['datetime'] = pd.to_datetime(traffic_df['datetime'])
         traffic_df['hour'] = traffic_df['datetime'].dt.hour
         traffic_df['day_of_week'] = traffic_df['datetime'].dt.dayofweek
@@ -131,7 +133,7 @@ try:
         # Pre-compute hourly averages per detector
         detector_hourly_avg = traffic_df.groupby(['detid', 'hour', 'day_of_week'])['occ'].mean().reset_index()
         detector_hourly_avg.columns = ['detid', 'hour', 'day_of_week', 'avg_occ']
-        print(f"✓ Traffic data loaded: {len(traffic_df):,} records")
+        print(f"✓ Traffic data loaded: {len(traffic_df):,} records (20% sample)")
     else:
         print("⚠ marseille_clean.csv not available (set GDRIVE_MARSEILLE_DATA env variable)")
 except Exception as e:
