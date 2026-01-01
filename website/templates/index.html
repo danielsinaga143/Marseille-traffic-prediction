@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔮 Traffic Prediction Dashboard - Marseille</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .model-badge {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            gap: 5px;
+            padding: 15px 30px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .tab-btn {
+            padding: 12px 25px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+        
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.15);
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        
+        /* Main Container */
+        .container {
+            padding: 20px 30px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Cards */
+        .card {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .card h2 {
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Model Cards Grid */
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .model-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        
+        .model-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .model-card .type {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-bottom: 10px;
+        }
+        
+        .model-card p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+        
+        .model-status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            margin-top: 15px;
+        }
+        
+        .model-status.active {
+            background: rgba(46, 204, 113, 0.3);
+            color: #2ecc71;
+        }
+        
+        .model-status.inactive {
+            background: rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+        }
+        
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-group label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        select, button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        select option {
+            background: #1a1a2e;
+        }
+        
+        button.primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+        }
+        
+        button.primary:hover {
+            opacity: 0.9;
+        }
+        
+        /* Map */
+        #map, #spectral-map, #prophet-map {
+            height: 500px;
+            border-radius: 10px;
+            z-index: 1;
+        }
+        
+        /* Timeline */
+        .timeline {
+            display: flex;
+            overflow-x: auto;
+            gap: 5px;
+            padding: 10px 0;
+            margin-bottom: 20px;
+        }
+        
+        .timeline-hour {
+            min-width: 60px;
+            padding: 10px 8px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .timeline-hour:hover {
+            background: rgba(255,255,255,0.15);
+        }
+        
+        .timeline-hour.active {
+            background: rgba(102, 126, 234, 0.5);
+            transform: scale(1.05);
+        }
+        
+        .timeline-hour .hour {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .timeline-hour .status {
+            font-size: 0.7rem;
+            margin-top: 3px;
+            opacity: 0.8;
+        }
+        
+        .timeline-hour .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin: 8px auto 0;
+        }
+        
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+            flex: 1;
+        }
+        
+        .stat-item .icon {
+            font-size: 1.5rem;
+        }
+        
+        .stat-item .value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .stat-item .label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        
+        /* Chart Container */
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+        
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th, .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .data-table th {
+            background: rgba(255,255,255,0.05);
+            font-weight: 600;
+        }
+        
+        .data-table tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+        
+        /* Responsive Grid */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1024px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            opacity: 0.7;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            opacity: 0.5;
+            font-size: 0.85rem;
+        }
+        
+        /* Probability Bar */
+        .prob-bar {
+            display: flex;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .prob-bar div {
+            transition: flex 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>🔮 Traffic Prediction Dashboard</h1>
+        <div class="header-right">
+            <div class="model-badge" id="active-model">Model: Loading...</div>
+            <div id="current-time"></div>
+        </div>
+    </header>
+    
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" onclick="showTab('prediction', event)">🌲 Random Forest</button>
+        <button class="tab-btn" onclick="showTab('prophet', event)">🔮 Prophet Time Series</button>
+        <button class="tab-btn" onclick="showTab('clustering', event)">🔍 Spectral Clustering</button>
+        <button class="tab-btn" onclick="showTab('models', event)">🤖 Tentang Model</button>
+    </nav>
+    
+    <div class="container">
+        <!-- TAB 1: Prediksi & Peta (Gabungan) -->
+        <div id="tab-prediction" class="tab-content active">
+            <!-- Section 1: Peta Prediksi -->
+            <div class="card">
+                <h2>🗺️ Peta Prediksi Traffic Real-time</h2>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Jam:</label>
+                        <select id="map-hour"></select>
+                    </div>
+                    <div class="control-group">
+                        <label>Hari:</label>
+                        <select id="map-day">
+                            <option value="0">Senin</option>
+                            <option value="1">Selasa</option>
+                            <option value="2">Rabu</option>
+                            <option value="3">Kamis</option>
+                            <option value="4">Jumat</option>
+                            <option value="5">Sabtu</option>
+                            <option value="6">Minggu</option>
+                        </select>
+                    </div>
+                    <button class="primary" onclick="updateMap()">🔄 Update Peta</button>
+                </div>
+                
+                <div class="stats-bar" id="map-stats">
+                    <div class="stat-item">
+                        <div class="icon">🟢</div>
+                        <div>
+                            <div class="value" id="map-stat-lancar">-</div>
+                            <div class="label">Sensor Lancar</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="icon">🟠</div>
+                        <div>
+                            <div class="value" id="map-stat-sedang">-</div>
+                            <div class="label">Sensor Sedang</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="icon">🔴</div>
+                        <div>
+                            <div class="value" id="map-stat-macet">-</div>
+                            <div class="label">Sensor Macet</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="map"></div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2ecc71;"></div>
+                        <span>Lancar</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f39c12;"></div>
+                        <span>Sedang</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e74c3c;"></div>
+                        <span>Macet</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section 2: Prediksi 24 Jam -->
+            <div class="card">
+                <h2>⏰ Prediksi Traffic 24 Jam</h2>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Hari:</label>
+                        <select id="predict-day">
+                            <option value="0">Senin</option>
+                            <option value="1">Selasa</option>
+                            <option value="2">Rabu</option>
+                            <option value="3">Kamis</option>
+                            <option value="4">Jumat</option>
+                            <option value="5">Sabtu</option>
+                            <option value="6">Minggu</option>
+                        </select>
+                    </div>
+                    <button class="primary" onclick="load24HourPrediction()">🔄 Update Prediksi</button>
+                </div>
+                
+                <!-- Stats -->
+                <div class="stats-bar" id="prediction-stats">
+                    <div class="stat-item">
+                        <div class="icon">🟢</div>
+                        <div>
+                            <div class="value" id="stat-lancar">-</div>
+                            <div class="label">Jam Lancar</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="icon">🟠</div>
+                        <div>
+                            <div class="value" id="stat-sedang">-</div>
+                            <div class="label">Jam Sedang</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="icon">🔴</div>
+                        <div>
+                            <div class="value" id="stat-macet">-</div>
+                            <div class="label">Jam Macet</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timeline -->
+                <div class="timeline" id="prediction-timeline"></div>
+                
+                <!-- Chart -->
+                <div class="chart-container">
+                    <canvas id="prediction-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- TAB 3: Prophet Time Series -->
+        <div id="tab-prophet" class="tab-content">
+            <!-- Info Box -->
+            <div style="background: rgba(52, 152, 219, 0.15); border-left: 4px solid #3498db; padding: 15px 20px; margin-bottom: 15px; border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 24px;">💡</span>
+                    <div>
+                        <strong style="color: #3498db; font-size: 1rem;">Tips:</strong>
+                        <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.95rem;">
+                            Klik pada sensor di peta untuk melihat grafik prediksi lengkap 24 jam. 
+                            Setiap sensor menampilkan pola traffic per jam dengan detail occupancy rate.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Full width map like the original HTML -->
+            <div id="prophet-map" style="height: calc(100vh - 250px); min-height: 600px; border-radius: 0;"></div>
+            
+            <!-- Floating Legend -->
+            <div id="prophet-legend" style="position: fixed; bottom: 30px; left: 20px; background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 2px 15px rgba(0,0,0,0.2); z-index: 1000; font-family: Arial;">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #2c3e50;">📊 Prediksi <span id="prophet-date-legend">-</span></h4>
+                <div style="display: flex; align-items: center; margin: 8px 0;">
+                    <span style="display: inline-block; width: 16px; height: 16px; background: #2ecc71; border-radius: 50%; margin-right: 8px;"></span>
+                    <span style="font-size: 13px; color: #333;">Lancar (&lt;30%): <b id="prophet-stat-lancar">0</b></span>
+                </div>
+                <div style="display: flex; align-items: center; margin: 8px 0;">
+                    <span style="display: inline-block; width: 16px; height: 16px; background: #f39c12; border-radius: 50%; margin-right: 8px;"></span>
+                    <span style="font-size: 13px; color: #333;">Sedang (30-60%): <b id="prophet-stat-sedang">0</b></span>
+                </div>
+                <div style="display: flex; align-items: center; margin: 8px 0;">
+                    <span style="display: inline-block; width: 16px; height: 16px; background: #e74c3c; border-radius: 50%; margin-right: 8px;"></span>
+                    <span style="font-size: 13px; color: #333;">Macet (&gt;60%): <b id="prophet-stat-macet">0</b></span>
+                </div>
+                <hr style="margin: 12px 0; border: none; border-top: 1px solid #ecf0f1;">
+                <p style="margin: 0; font-size: 11px; color: #7f8c8d;">Total: <b id="prophet-total">0</b> sensor</p>
+                <p style="margin: 5px 0 0 0; font-size: 10px; color: #95a5a6;">Klik sensor untuk detail 24 jam</p>
+            </div>
+        </div>
+        
+        <!-- TAB 3: Spectral Clustering -->
+        <div id="tab-clustering" class="tab-content">
+            <div class="card">
+                <h2>🔍 Spectral Clustering - Pola Traffic</h2>
+                <p style="opacity: 0.8; margin-bottom: 20px;">Model Unsupervised Learning untuk mengelompokkan sensor berdasarkan pola karakteristik traffic yang serupa</p>
+                
+                <!-- Stats -->
+                <div class="stats-bar" id="spectral-stats">
+                    <div class="stat-item">
+                        <div class="icon">🔴</div>
+                        <div>
+                            <div class="value" id="spectral-cluster0">-</div>
+                            <div class="label">Cluster 0 (Padat)</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="icon">🔵</div>
+                        <div>
+                            <div class="value" id="spectral-cluster1">-</div>
+                            <div class="label">Cluster 1 (Sedang)</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="icon">🟢</div>
+                        <div>
+                            <div class="value" id="spectral-cluster2">-</div>
+                            <div class="label">Cluster 2 (Lancar)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Map -->
+                <div id="spectral-map" style="height: 500px; border-radius: 10px; margin-top: 20px;"></div>
+                
+                <div class="legend" style="margin-top: 15px;">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e74c3c;"></div>
+                        <span>Cluster 0 - Traffic Padat (Avg >7%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #3498db;"></div>
+                        <span>Cluster 1 - Traffic Sedang (3.5-7%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2ecc71;"></div>
+                        <span>Cluster 2 - Traffic Lancar (<3.5%)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cluster Details -->
+            <div class="card">
+                <h2>📈 Statistik Clustering</h2>
+                <div id="cluster-details" class="loading">Loading cluster details...</div>
+            </div>
+        </div>
+        
+        <!-- TAB 4: Tentang Model -->
+        <div id="tab-models" class="tab-content">
+            <div class="card">
+                <h2>🤖 Model yang Digunakan</h2>
+                <p style="opacity: 0.8; margin-bottom: 25px; font-size: 0.95rem;">
+                    Sistem ini menggunakan 3 model machine learning yang saling melengkapi untuk analisis traffic komprehensif.
+                </p>
+                <div class="models-grid" id="models-info">
+                    <div class="loading">Loading models...</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <footer class="footer">
+        Traffic Prediction Dashboard | 3 Models: Random Forest + Prophet + Spectral Clustering | Marseille Traffic Analysis
+    </footer>
+    
+    <script>
+        // ============================================================================
+        // GLOBAL VARIABLES
+        // ============================================================================
+        let map = null;
+        let prophetMap = null;
+        let spectralMap = null;
+        let markers = [];
+        let prophetMarkers = [];
+        let spectralMarkers = [];
+        let predictionChart = null;
+        let prophetLayerMacet = null;
+        let prophetLayerSedang = null;
+        let prophetLayerLancar = null;
+        
+        // ============================================================================
+        // INITIALIZE
+        // ============================================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing...');
+            
+            try {
+                initializeSelects();
+                updateTime();
+                setInterval(updateTime, 1000);
+                
+                // Set initial model badge
+                const modelBadge = document.getElementById('active-model');
+                if (modelBadge) {
+                    modelBadge.textContent = 'Model: Random Forest ✓';
+                }
+                
+                loadModelsInfo();
+                load24HourPrediction();
+                
+                // Inisialisasi map dengan delay untuk memastikan DOM ready
+                setTimeout(() => {
+                    try {
+                        initMap();
+                    } catch (error) {
+                        console.error('Error initializing map:', error);
+                    }
+                }, 300);
+            } catch (error) {
+                console.error('Error during initialization:', error);
+            }
+        });
+        
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('id-ID');
+        }
+        
+        function initializeSelects() {
+            // Hour selects
+            const hourSelects = ['map-hour', 'prophet-hour'];
+            hourSelects.forEach(id => {
+                const select = document.getElementById(id);
+                if (select) {
+                    for (let i = 0; i < 24; i++) {
+                        const option = document.createElement('option');
+                        option.value = i;
+                        option.textContent = `${i.toString().padStart(2, '0')}:00`;
+                        if (i === new Date().getHours()) option.selected = true;
+                        select.appendChild(option);
+                    }
+                }
+            });
+            
+            // Set current day
+            const currentDay = (new Date().getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
+            document.getElementById('predict-day').value = currentDay;
+            document.getElementById('map-day').value = currentDay;
+        }
+        
+        // ============================================================================
+        // TAB NAVIGATION
+        // ============================================================================
+        function showTab(tabName, evt) {
+            // Hide all tabs
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Remove active from all buttons
+            const btns = document.querySelectorAll('.tab-btn');
+            btns.forEach(btn => btn.classList.remove('active'));
+            
+            // Show selected tab
+            const selectedTab = document.getElementById('tab-' + tabName);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+            
+            // Set active button
+            if (evt && evt.currentTarget) {
+                evt.currentTarget.classList.add('active');
+            }
+            
+            // Update model badge based on active tab
+            const modelBadge = document.getElementById('active-model');
+            if (modelBadge) {
+                switch(tabName) {
+                    case 'prediction':
+                        modelBadge.textContent = 'Model: Random Forest ✓';
+                        break;
+                    case 'prophet':
+                        modelBadge.textContent = 'Model: Prophet ✓';
+                        break;
+                    case 'clustering':
+                        modelBadge.textContent = 'Model: Spectral Clustering ✓';
+                        break;
+                    case 'models':
+                        modelBadge.textContent = '3 Models Active ✓';
+                        break;
+                    default:
+                        modelBadge.textContent = 'Model: Loading...';
+                }
+            }
+            
+            // Initialize maps when tab is shown
+            setTimeout(() => {
+                if (tabName === 'prediction' && map) {
+                    map.invalidateSize();
+                } else if (tabName === 'prediction' && !map) {
+                    initMap();
+                }
+                
+                if (tabName === 'prophet' && prophetMap) {
+                    prophetMap.invalidateSize();
+                } else if (tabName === 'prophet' && !prophetMap) {
+                    initProphetMap();
+                    loadProphetPredictions();
+                }
+                
+                if (tabName === 'clustering' && spectralMap) {
+                    spectralMap.invalidateSize();
+                } else if (tabName === 'clustering' && !spectralMap) {
+                    initSpectralMap();
+                    loadSpectralClustering();
+                }
+            }, 100);
+        }
+        
+        // ============================================================================
+        // MODELS INFO
+        // ============================================================================
+        async function loadModelsInfo() {
+            try {
+                const response = await fetch('/api/models/info');
+                const data = await response.json();
+                
+                let modelsHtml = '';
+                
+                // Random Forest
+                modelsHtml += `
+                    <div class="model-card">
+                        <h3>🌲 ${data.random_forest.name}</h3>
+                        <div class="type">${data.random_forest.type}</div>
+                        <p>${data.random_forest.description}</p>
+                        <p style="margin-top: 10px;"><strong>Features:</strong> ${data.random_forest.features}</p>
+                        <p style="margin-top: 5px; opacity: 0.8;"><strong>Use Case:</strong> ${data.random_forest.use_case}</p>
+                        <span class="model-status ${data.random_forest.available ? 'active' : 'inactive'}">
+                            ${data.random_forest.available ? '✓ Model Aktif' : '✗ Tidak Tersedia'}
+                        </span>
+                    </div>
+                `;
+                
+                // Prophet
+                modelsHtml += `
+                    <div class="model-card">
+                        <h3>🔮 ${data.prophet.name}</h3>
+                        <div class="type">${data.prophet.type}</div>
+                        <p>${data.prophet.description}</p>
+                        <p style="margin-top: 10px;"><strong>Sensors:</strong> ${data.prophet.sensors}</p>
+                        <p style="margin-top: 5px; opacity: 0.8;"><strong>Use Case:</strong> ${data.prophet.use_case}</p>
+                        <span class="model-status ${data.prophet.available ? 'active' : 'inactive'}">
+                            ${data.prophet.available ? '✓ Prediksi Tersedia' : '✗ Tidak Tersedia'}
+                        </span>
+                    </div>
+                `;
+                
+                // Spectral Clustering
+                modelsHtml += `
+                    <div class="model-card">
+                        <h3>🔍 ${data.spectral.name}</h3>
+                        <div class="type">${data.spectral.type}</div>
+                        <p>${data.spectral.description}</p>
+                        <p style="margin-top: 10px;"><strong>Clusters:</strong> ${data.spectral.n_clusters}</p>
+                        <p style="margin-top: 5px; opacity: 0.8;"><strong>Use Case:</strong> ${data.spectral.use_case}</p>
+                        <span class="model-status ${data.spectral.available ? 'active' : 'inactive'}">
+                            ${data.spectral.available ? '✓ Model Aktif' : '✗ Tidak Tersedia'}
+                        </span>
+                    </div>
+                `;
+                
+                document.getElementById('models-info').innerHTML = modelsHtml;
+                document.getElementById('active-model').textContent = 
+                    data.random_forest.available ? 'Model: Random Forest ✓' : 'Model: Pattern-based';
+                
+            } catch (error) {
+                console.error('Error loading models info:', error);
+            }
+        }
+        
+        // ============================================================================
+        // 24-HOUR PREDICTION
+        // ============================================================================
+        async function load24HourPrediction() {
+            const day = document.getElementById('predict-day').value;
+            
+            try {
+                const response = await fetch(`/api/predict/24hours?day=${day}`);
+                const data = await response.json();
+                
+                // Update stats
+                document.getElementById('stat-lancar').textContent = data.stats.lancar;
+                document.getElementById('stat-sedang').textContent = data.stats.sedang;
+                document.getElementById('stat-macet').textContent = data.stats.macet;
+                
+                // Build timeline
+                let timelineHtml = '';
+                data.predictions.forEach(pred => {
+                    timelineHtml += `
+                        <div class="timeline-hour" onclick="selectHour(${pred.hour})">
+                            <div class="hour">${pred.hour_label}</div>
+                            <div class="status">${pred.status}</div>
+                            <div class="dot" style="background: ${pred.color};"></div>
+                        </div>
+                    `;
+                });
+                document.getElementById('prediction-timeline').innerHTML = timelineHtml;
+                
+                // Build chart
+                buildPredictionChart(data.predictions);
+                
+            } catch (error) {
+                console.error('Error loading prediction:', error);
+            }
+        }
+        
+        function buildPredictionChart(predictions) {
+            const ctx = document.getElementById('prediction-chart').getContext('2d');
+            
+            if (predictionChart) {
+                predictionChart.destroy();
+            }
+            
+            predictionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: predictions.map(p => p.hour_label),
+                    datasets: [
+                        {
+                            label: 'Lancar %',
+                            data: predictions.map(p => p.probabilities.Lancar),
+                            backgroundColor: '#2ecc7180',
+                            borderColor: '#2ecc71',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Sedang %',
+                            data: predictions.map(p => p.probabilities.Sedang),
+                            backgroundColor: '#f39c1280',
+                            borderColor: '#f39c12',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Macet %',
+                            data: predictions.map(p => p.probabilities.Macet),
+                            backgroundColor: '#e74c3c80',
+                            borderColor: '#e74c3c',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#fff' }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Probabilitas Prediksi per Jam',
+                            color: '#fff'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            ticks: { color: '#fff' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        y: {
+                            stacked: true,
+                            max: 100,
+                            ticks: { color: '#fff' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // ============================================================================
+        // MAP
+        // ============================================================================
+        function initMap() {
+            try {
+                console.log('Initializing main map...');
+                const mapElement = document.getElementById('map');
+                if (!mapElement) {
+                    console.error('Map element not found!');
+                    return;
+                }
+                
+                map = L.map('map').setView([43.2965, 5.3698], 12);
+                
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '© OpenStreetMap, © CartoDB'
+                }).addTo(map);
+                
+                console.log('Main map initialized successfully');
+                updateMap();
+            } catch (error) {
+                console.error('Error in initMap:', error);
+            }
+        }
+        
+        async function updateMap() {
+            try {
+                if (!map) {
+                    console.log('Map not initialized, initializing now...');
+                    initMap();
+                    return;
+                }
+            
+                const hour = document.getElementById('map-hour').value;
+                const day = document.getElementById('map-day').value;
+            
+                const response = await fetch(`/api/predict/map?hour=${hour}&day=${day}`);
+                const data = await response.json();
+                
+                // Clear markers
+                markers.forEach(m => map.removeLayer(m));
+                markers = [];
+                
+                // Update stats
+                document.getElementById('map-stat-lancar').textContent = data.stats.Lancar;
+                document.getElementById('map-stat-sedang').textContent = data.stats.Sedang;
+                document.getElementById('map-stat-macet').textContent = data.stats.Macet;
+                
+                // Add markers
+                data.sensors.forEach(sensor => {
+                    const marker = L.circleMarker([sensor.lat, sensor.long], {
+                        radius: 7,
+                        fillColor: sensor.color,
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+                    
+                    marker.bindPopup(`
+                        <div style="min-width: 200px;">
+                            <h4 style="margin: 0 0 10px;">Sensor: ${sensor.detid}</h4>
+                            <p><strong>Road:</strong> ${sensor.road}</p>
+                            <p><strong>Status:</strong> <span style="color: ${sensor.color}; font-weight: bold;">${sensor.status}</span></p>
+                            <p><strong>Jam:</strong> ${data.hour_label}</p>
+                            <div style="margin-top: 10px;">
+                                <strong>Probabilitas:</strong>
+                                <div style="display: flex; height: 20px; border-radius: 4px; overflow: hidden; margin-top: 5px;">
+                                    <div style="flex: ${sensor.probabilities.Lancar}; background: #2ecc71;"></div>
+                                    <div style="flex: ${sensor.probabilities.Sedang}; background: #f39c12;"></div>
+                                    <div style="flex: ${sensor.probabilities.Macet}; background: #e74c3c;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                    
+                    marker.addTo(map);
+                    markers.push(marker);
+                });
+                
+            } catch (error) {
+                console.error('Error updating map:', error);
+            }
+        }
+        
+        // ============================================================================
+        // PROPHET PREDICTIONS - Full Map with Detailed Popup
+        // ============================================================================
+        
+        function initProphetMap() {
+            try {
+                console.log('Initializing prophet map...');
+                const mapElement = document.getElementById('prophet-map');
+                if (!mapElement) {
+                    console.error('Prophet map element not found!');
+                    return;
+                }
+                
+                prophetMap = L.map('prophet-map').setView([43.2965, 5.3698], 12);
+            
+            // Multiple tile layers
+            const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap, © CartoDB'
+            });
+            
+            const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap, © CartoDB'
+            });
+            
+            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            });
+            
+            // Add default layer
+            cartoLight.addTo(prophetMap);
+            
+            // Create feature groups for each status
+            prophetLayerMacet = L.featureGroup().addTo(prophetMap);
+            prophetLayerSedang = L.featureGroup().addTo(prophetMap);
+            prophetLayerLancar = L.featureGroup().addTo(prophetMap);
+            
+            // Base layers
+            const baseLayers = {
+                "cartodbpositron": cartoLight,
+                "CartoDB Dark": cartoDark,
+                "OpenStreetMap": osm
+            };
+            
+            // Overlay layers (status groups)
+            const overlays = {
+                "🔴 Macet (>60%)": prophetLayerMacet,
+                "🟠 Sedang (30-60%)": prophetLayerSedang,
+                "🟢 Lancar (<30%)": prophetLayerLancar
+            };
+            
+            // Add layer control
+            L.control.layers(baseLayers, overlays, {position: 'topright'}).addTo(prophetMap);
+            
+            console.log('Prophet map initialized successfully');
+            } catch (error) {
+                console.error('Error in initProphetMap:', error);
+            }
+        }
+        
+        async function loadProphetPredictions() {
+            if (!prophetMap) {
+                initProphetMap();
+            }
+            
+            try {
+                const response = await fetch('/api/prophet/predictions');
+                const data = await response.json();
+                
+                if (!data.available) {
+                    return;
+                }
+                
+                // Format date
+                const predDate = new Date(data.prediction_date);
+                const dateOptions = { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' };
+                const formattedDate = predDate.toLocaleDateString('id-ID', dateOptions);
+                
+                // Update stats
+                document.getElementById('prophet-date-legend').textContent = data.prediction_date;
+                document.getElementById('prophet-total').textContent = data.total;
+                document.getElementById('prophet-stat-lancar').textContent = data.stats.Lancar || 0;
+                document.getElementById('prophet-stat-sedang').textContent = data.stats.Sedang || 0;
+                document.getElementById('prophet-stat-macet').textContent = data.stats.Macet || 0;
+                
+                // Update title
+                const titleEl = document.getElementById('prophet-title-date');
+                if (titleEl) titleEl.textContent = formattedDate;
+                
+                // Clear layers
+                prophetLayerMacet.clearLayers();
+                prophetLayerSedang.clearLayers();
+                prophetLayerLancar.clearLayers();
+                
+                // Add markers with detailed popup
+                data.sensors.forEach(sensor => {
+                    const marker = L.circleMarker([sensor.lat, sensor.long], {
+                        radius: 7,
+                        fillColor: sensor.current_color,
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+                    
+                    // Build SVG bar chart for 24 hours
+                    let chartBars = '';
+                    sensor.hourly.forEach((h, idx) => {
+                        const height = Math.max(3, h.occupancy * 0.6);
+                        chartBars += `<rect x="${idx*13 + 2}" y="${65 - height}" width="11" height="${height}" fill="${h.color}" rx="1"/>`;
+                    });
+                    
+                    // Hour labels
+                    let hourLabels = '';
+                    [0, 3, 6, 9, 12, 15, 18, 21].forEach(h => {
+                        hourLabels += `<text x="${h*13 + 7}" y="78" font-size="7" text-anchor="middle" fill="#7f8c8d">${h.toString().padStart(2,'0')}</text>`;
+                    });
+                    
+                    // Build hourly table (4 rows x 6 columns)
+                    let hourlyTable = '';
+                    for (let row = 0; row < 4; row++) {
+                        hourlyTable += '<tr>';
+                        for (let col = 0; col < 6; col++) {
+                            const h = row * 6 + col;
+                            const hourData = sensor.hourly[h];
+                            if (hourData) {
+                                hourlyTable += `
+                                    <td style="padding: 4px 6px; text-align: center; border: 1px solid #ecf0f1;">
+                                        <div style="font-size: 10px; color: #7f8c8d;">${h.toString().padStart(2,'0')}:00</div>
+                                        <div style="font-size: 13px; font-weight: bold; color: ${hourData.color};">${hourData.occupancy}%</div>
+                                    </td>
+                                `;
+                            }
+                        }
+                        hourlyTable += '</tr>';
+                    }
+                    
+                    // Create detailed popup like original HTML
+                    const popupContent = `
+                        <div style="width: 420px; font-family: Arial, sans-serif;">
+                            <div style="background: linear-gradient(135deg, ${sensor.current_color} 0%, ${sensor.current_color}dd 100%); 
+                                        color: white; padding: 12px; border-radius: 8px 8px 0 0;">
+                                <h4 style="margin: 0; font-size: 16px;">🚦 Sensor ${sensor.detid}</h4>
+                                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 12px;">${sensor.road}</p>
+                            </div>
+                            
+                            <div style="padding: 12px; background: #f8f9fa;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <div style="text-align: center; flex: 1;">
+                                        <p style="margin: 0; font-size: 11px; color: #7f8c8d;">PEAK</p>
+                                        <p style="margin: 0; font-size: 22px; font-weight: bold; color: ${sensor.current_color};">${sensor.peak_occupancy}%</p>
+                                        <p style="margin: 0; font-size: 10px; color: #7f8c8d;">jam ${sensor.peak_hour.toString().padStart(2,'0')}:00</p>
+                                    </div>
+                                    <div style="text-align: center; flex: 1; border-left: 1px solid #ddd;">
+                                        <p style="margin: 0; font-size: 11px; color: #7f8c8d;">RATA-RATA</p>
+                                        <p style="margin: 0; font-size: 22px; font-weight: bold; color: #2c3e50;">${sensor.avg_occupancy}%</p>
+                                        <p style="margin: 0; font-size: 10px; color: #7f8c8d;">24 jam</p>
+                                    </div>
+                                    <div style="text-align: center; flex: 1; border-left: 1px solid #ddd;">
+                                        <p style="margin: 0; font-size: 11px; color: #7f8c8d;">MINIMUM</p>
+                                        <p style="margin: 0; font-size: 22px; font-weight: bold; color: #2ecc71;">${sensor.min_occupancy}%</p>
+                                        <p style="margin: 0; font-size: 10px; color: #7f8c8d;">terendah</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Bar Chart -->
+                                <div style="background: white; padding: 8px; border-radius: 5px; margin-top: 10px;">
+                                    <p style="margin: 0 0 5px 0; font-size: 11px; font-weight: bold; color: #2c3e50;">
+                                        📊 Grafik Prediksi 24 Jam
+                                    </p>
+                                    <svg width="320" height="85" style="display: block;">
+                                        <rect x="0" y="0" width="320" height="65" fill="#f8f9fa" rx="3"/>
+                                        <line x1="2" y1="17" x2="318" y2="17" stroke="#e74c3c" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.5"/>
+                                        <text x="320" y="20" font-size="6" fill="#e74c3c">60%</text>
+                                        <line x1="2" y1="41" x2="318" y2="41" stroke="#f39c12" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.5"/>
+                                        <text x="320" y="44" font-size="6" fill="#f39c12">30%</text>
+                                        ${chartBars}
+                                        ${hourLabels}
+                                    </svg>
+                                </div>
+                                
+                                <!-- Hourly Table -->
+                                <div style="background: white; padding: 8px; border-radius: 5px; margin-top: 10px;">
+                                    <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: bold; color: #2c3e50;">
+                                        🕐 Detail Prediksi Per Jam
+                                    </p>
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                                        ${hourlyTable}
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div style="padding: 8px 12px; background: #ecf0f1; border-radius: 0 0 8px 8px; font-size: 10px; color: #7f8c8d;">
+                                📅 ${data.prediction_date} | 🔮 Prophet Model
+                            </div>
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent, {maxWidth: 450});
+                    
+                    // Tooltip on hover
+                    marker.bindTooltip(`<b>${sensor.detid}</b><br>${sensor.current_status}: ${sensor.peak_occupancy}% (peak jam ${sensor.peak_hour}:00)`, {
+                        direction: 'top'
+                    });
+                    
+                    // Add to appropriate layer based on status
+                    if (sensor.current_status === 'Macet') {
+                        marker.addTo(prophetLayerMacet);
+                    } else if (sensor.current_status === 'Sedang') {
+                        marker.addTo(prophetLayerSedang);
+                    } else {
+                        marker.addTo(prophetLayerLancar);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error loading prophet predictions:', error);
+            }
+        }
+        
+        // ============================================================================
+        // SPECTRAL CLUSTERING
+        // ============================================================================
+        function initSpectralMap() {
+            try {
+                console.log('Initializing spectral map...');
+                const mapElement = document.getElementById('spectral-map');
+                if (!mapElement) {
+                    console.error('Spectral map element not found!');
+                    return;
+                }
+                
+                spectralMap = L.map('spectral-map').setView([43.2965, 5.3698], 12);
+            
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '© OpenStreetMap, © CartoDB'
+                }).addTo(spectralMap);
+                
+                console.log('Spectral map initialized successfully');
+            } catch (error) {
+                console.error('Error in initSpectralMap:', error);
+            }
+        }
+        
+        async function loadSpectralClustering() {
+            if (!spectralMap) {
+                initSpectralMap();
+            }
+            
+            try {
+                const response = await fetch('/api/clustering/spectral');
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Spectral clustering data tidak tersedia: ' + data.error);
+                    return;
+                }
+                
+                // Update stats
+                const clusterCounts = {0: 0, 1: 0, 2: 0};
+                data.sensors.forEach(s => {
+                    clusterCounts[s.cluster] = (clusterCounts[s.cluster] || 0) + 1;
+                });
+                
+                document.getElementById('spectral-cluster0').textContent = clusterCounts[0];
+                document.getElementById('spectral-cluster1').textContent = clusterCounts[1];
+                document.getElementById('spectral-cluster2').textContent = clusterCounts[2];
+                
+                // Cluster colors
+                const clusterColors = {
+                    0: '#e74c3c',  // Red - Dense traffic
+                    1: '#3498db',  // Blue - Medium traffic  
+                    2: '#2ecc71'   // Green - Light traffic
+                };
+                
+                const clusterNames = {
+                    0: 'Traffic Padat',
+                    1: 'Traffic Sedang',
+                    2: 'Traffic Lancar'
+                };
+                
+                // Clear existing markers
+                spectralMarkers.forEach(m => spectralMap.removeLayer(m));
+                spectralMarkers = [];
+                
+                // Add markers
+                data.sensors.forEach(sensor => {
+                    const color = clusterColors[sensor.cluster] || '#95a5a6';
+                    
+                    const marker = L.circleMarker([sensor.lat, sensor.long], {
+                        radius: 8,
+                        fillColor: color,
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.7
+                    });
+                    
+                    const popupContent = `
+                        <div style="min-width: 220px; font-family: Arial;">
+                            <div style="background: ${color}; color: white; padding: 10px; margin: -10px -10px 10px -10px; border-radius: 5px 5px 0 0;">
+                                <h4 style="margin: 0;">🚦 Sensor ${sensor.detid}</h4>
+                            </div>
+                            <p style="margin: 5px 0;"><strong>Jalan:</strong> ${sensor.road || 'N/A'}</p>
+                            <p style="margin: 5px 0;"><strong>Cluster:</strong> ${sensor.cluster} - ${clusterNames[sensor.cluster]}</p>
+                            <p style="margin: 5px 0;"><strong>Avg Occupancy:</strong> ${sensor.avg_occupancy}%</p>
+                            <p style="margin: 5px 0;"><strong>Std Dev:</strong> ${sensor.std_occupancy}%</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.85em; opacity: 0.7; padding-top: 8px; border-top: 1px solid #ddd;">
+                                📊 Sensor dalam cluster ini memiliki pola traffic yang serupa
+                            </p>
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    marker.bindTooltip(`${sensor.detid} - ${clusterNames[sensor.cluster]}`, {
+                        direction: 'top'
+                    });
+                    marker.addTo(spectralMap);
+                    spectralMarkers.push(marker);
+                });
+                
+                // Build cluster details table
+                let detailsHtml = `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Cluster</th>
+                                <th>Kategori</th>
+                                <th>Jumlah Sensor</th>
+                                <th>Avg Occupancy</th>
+                                <th>Karakteristik</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                Object.keys(data.stats).forEach(clusterId => {
+                    const stat = data.stats[clusterId];
+                    const color = clusterColors[clusterId];
+                    
+                    detailsHtml += `
+                        <tr>
+                            <td><span style="display: inline-block; width: 16px; height: 16px; background: ${color}; border-radius: 50%; margin-right: 8px;"></span>Cluster ${clusterId}</td>
+                            <td><strong>${clusterNames[clusterId]}</strong></td>
+                            <td>${stat.count} sensor</td>
+                            <td>${stat.avg_occupancy}%</td>
+                            <td>${clusterId == 0 ? 'Jalan utama, traffic tinggi, sering macet' : clusterId == 1 ? 'Traffic menengah, kadang ramai' : 'Jalan sepi, traffic rendah'}</td>
+                        </tr>
+                    `;
+                });
+                
+                detailsHtml += `
+                        </tbody>
+                    </table>
+                    <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9em;">
+                        💡 <strong>Total ${data.total} sensor</strong> dikelompokkan menjadi ${data.n_clusters} cluster berdasarkan pola occupancy rata-rata.
+                    </p>
+                `;
+                
+                document.getElementById('cluster-details').innerHTML = detailsHtml;
+                
+            } catch (error) {
+                console.error('Error loading spectral clustering:', error);
+                document.getElementById('cluster-details').innerHTML = 
+                    '<p style="color: #e74c3c;">Error loading clustering data</p>';
+            }
+        }
+        
+
+    </script>
+</body>
+</html>
