@@ -76,7 +76,7 @@ GDRIVE_RF_MODEL = os.environ.get('GDRIVE_RF_MODEL', '')  # Google Drive ID untuk
 GDRIVE_ENCODERS = os.environ.get('GDRIVE_ENCODERS', '')  # Google Drive ID untuk model_encoders_revised.pkl
 GDRIVE_MARSEILLE_DATA = os.environ.get('GDRIVE_MARSEILLE_DATA', '')  # Google Drive ID untuk marseille_clean.csv
 
-# Load Random Forest Model (Optimized version untuk Railway)
+# Load Random Forest Model (TEMPORARILY DISABLED - testing without RF)
 rf_model = None
 model_encoders = None
 
@@ -84,7 +84,9 @@ model_encoders = None
 rf_model_path = os.path.join(BASE_PATH, 'traffic_model_optimized.pkl')
 encoders_path = os.path.join(BASE_PATH, 'model_encoders_optimized.pkl')
 
-# Try to download and load optimized model from Google Drive
+# DISABLED: Commenting out download to test Railway deployment without RF model
+# Once Railway works, can re-enable by uncommenting below
+"""
 try:
     if ensure_model_exists(rf_model_path, GDRIVE_RF_MODEL):
         import joblib
@@ -105,6 +107,10 @@ try:
         print("⚠ Model encoders not available")
 except Exception as e:
     print(f"⚠ Model encoders error: {e}")
+"""
+
+print("⚠ Random Forest model DISABLED (testing Railway deployment)")
+print("   Prophet and Spectral Clustering will work normally")
 
 # Load Sensor Data
 detectors_df = None
