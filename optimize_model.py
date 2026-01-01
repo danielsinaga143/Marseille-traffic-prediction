@@ -92,8 +92,8 @@ if __name__ == "__main__":
     encoders_output = "model_encoders_optimized.pkl"
     
     # Optimize Random Forest
-    # Opsi: Reduce to 50 trees (smallest - fit Railway 512MB RAM)
-    optimize_random_forest(rf_model_input, rf_model_output, n_estimators_keep=50, compress_level=9)
+    # Reduce to 25 trees untuk fit Railway 512MB RAM
+    optimize_random_forest(rf_model_input, rf_model_output, n_estimators_keep=25, compress_level=9)
     
     # Optimize Encoders
     if os.path.exists(encoders_input):

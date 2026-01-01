@@ -76,7 +76,7 @@ GDRIVE_RF_MODEL = os.environ.get('GDRIVE_RF_MODEL', '')  # Google Drive ID untuk
 GDRIVE_ENCODERS = os.environ.get('GDRIVE_ENCODERS', '')  # Google Drive ID untuk model_encoders_revised.pkl
 GDRIVE_MARSEILLE_DATA = os.environ.get('GDRIVE_MARSEILLE_DATA', '')  # Google Drive ID untuk marseille_clean.csv
 
-# Load Random Forest Model (TEMPORARILY DISABLED - testing without RF)
+# Load Random Forest Model (Optimized - 25 trees for Railway 512MB RAM)
 rf_model = None
 model_encoders = None
 
@@ -84,9 +84,7 @@ model_encoders = None
 rf_model_path = os.path.join(BASE_PATH, 'traffic_model_optimized.pkl')
 encoders_path = os.path.join(BASE_PATH, 'model_encoders_optimized.pkl')
 
-# DISABLED: Commenting out download to test Railway deployment without RF model
-# Once Railway works, can re-enable by uncommenting below
-"""
+# Try to download and load optimized model from Google Drive
 try:
     if ensure_model_exists(rf_model_path, GDRIVE_RF_MODEL):
         import joblib
@@ -94,7 +92,7 @@ try:
         print(f"✓ Random Forest model loaded: {len(rf_model.estimators_)} trees")
     else:
         print("⚠ Random Forest model not available")
-        print("   Upload optimized model to Google Drive and set GDRIVE_RF_MODEL variable")
+        print("   Upload optimized model (25 trees) to Google Drive and set GDRIVE_RF_MODEL")
 except Exception as e:
     print(f"⚠ Random Forest model error: {e}")
 
@@ -107,10 +105,6 @@ try:
         print("⚠ Model encoders not available")
 except Exception as e:
     print(f"⚠ Model encoders error: {e}")
-"""
-
-print("⚠ Random Forest model DISABLED (testing Railway deployment)")
-print("   Prophet and Spectral Clustering will work normally")
 
 # Load Sensor Data
 detectors_df = None
