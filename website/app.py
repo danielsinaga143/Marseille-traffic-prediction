@@ -19,28 +19,83 @@ app = Flask(__name__)
 BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 
 # ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+def download_file_from_google_drive(file_id, destination):
+    """Download file from Google Drive"""
+    import requests
+    
+    URL = "https://drive.google.com/uc?export=download&confirm=1"
+    session = requests.Session()
+    
+    response = session.get(URL, params={'id': file_id}, stream=True)
+    
+    # Save file
+    with open(destination, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=32768):
+            if chunk:
+                f.write(chunk)
+    
+    print(f"✓ Downloaded: {destination}")
+
+def ensure_model_exists(file_path, gdrive_id=None):
+    """Check if model exists, if not download from Google Drive"""
+    if os.path.exists(file_path):
+        return True
+    
+    if gdrive_id:
+        print(f"⚠ {file_path} not found, downloading from Google Drive...")
+        try:
+            download_file_from_google_drive(gdrive_id, file_path)
+            return True
+        except Exception as e:
+            print(f"❌ Failed to download: {e}")
+            return False
+    return False
+
+# ============================================================================
 # LOAD MODELS & DATA
 # ============================================================================
 print("=" * 60)
 print("🔮 TRAFFIC PREDICTION WEBSITE")
 print("=" * 60)
 
+# Google Drive File IDs (GANTI dengan ID Anda!)
+# Cara mendapatkan: Upload ke Google Drive, klik Share, copy link
+# Format link: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+# Ambil FILE_ID nya saja
+GDRIVE_RF_MODEL = os.environ.get('GDRIVE_RF_MODEL', '')  # Google Drive ID untuk traffic_model_time_location.pkl
+GDRIVE_ENCODERS = os.environ.get('GDRIVE_ENCODERS', '')  # Google Drive ID untuk model_encoders_revised.pkl
+GDRIVE_MARSEILLE_DATA = os.environ.get('GDRIVE_MARSEILLE_DATA', '')  # Google Drive ID untuk marseille_clean.csv
+
 # Load Random Forest Model
 rf_model = None
 model_encoders = None
-try:
-    with open(os.path.join(BASE_PATH, 'traffic_model_time_location.pkl'), 'rb') as f:
-        rf_model = pickle.load(f)
-    print("✓ Random Forest model loaded")
-except Exception as e:
-    print(f"⚠ Random Forest model not found: {e}")
+
+rf_model_path = os.path.join(BASE_PATH, 'traffic_model_time_location.pkl')
+encoders_path = os.path.join(BASE_PATH, 'model_encoders_revised.pkl')
 
 try:
-    with open(os.path.join(BASE_PATH, 'model_encoders_revised.pkl'), 'rb') as f:
-        model_encoders = pickle.load(f)
-    print("✓ Model encoders loaded")
+    # Try to load or download RF model
+    if ensure_model_exists(rf_model_path, GDRIVE_RF_MODEL):
+        with open(rf_model_path, 'rb') as f:
+            rf_model = pickle.load(f)
+        print("✓ Random Forest model loaded")
+    else:
+        print("⚠ Random Forest model not available (set GDRIVE_RF_MODEL env variable)")
 except Exception as e:
-    print(f"⚠ Model encoders not found: {e}")
+    print(f"⚠ Random Forest model error: {e}")
+
+try:
+    # Try to load or download encoders
+    if ensure_model_exists(encoders_path, GDRIVE_ENCODERS):
+        with open(encoders_path, 'rb') as f:
+            model_encoders = pickle.load(f)
+        print("✓ Model encoders loaded")
+    else:
+        print("⚠ Model encoders not available (set GDRIVE_ENCODERS env variable)")
+except Exception as e:
+    print(f"⚠ Model encoders error: {e}")
 
 # Load Sensor Data
 detectors_df = None
