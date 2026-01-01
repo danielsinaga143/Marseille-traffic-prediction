@@ -76,35 +76,35 @@ GDRIVE_RF_MODEL = os.environ.get('GDRIVE_RF_MODEL', '')  # Google Drive ID untuk
 GDRIVE_ENCODERS = os.environ.get('GDRIVE_ENCODERS', '')  # Google Drive ID untuk model_encoders_revised.pkl
 GDRIVE_MARSEILLE_DATA = os.environ.get('GDRIVE_MARSEILLE_DATA', '')  # Google Drive ID untuk marseille_clean.csv
 
-# Load Random Forest Model (DISABLED for Railway free tier - too large)
-# Railway free tier has only 512MB RAM, model is 3GB
+# Load Random Forest Model (Optimized version untuk Railway)
 rf_model = None
 model_encoders = None
 
-rf_model_path = os.path.join(BASE_PATH, 'traffic_model_time_location.pkl')
-encoders_path = os.path.join(BASE_PATH, 'model_encoders_revised.pkl')
+# Use optimized model names
+rf_model_path = os.path.join(BASE_PATH, 'traffic_model_optimized.pkl')
+encoders_path = os.path.join(BASE_PATH, 'model_encoders_optimized.pkl')
 
-# Check if models already exist locally (not on Railway)
-if os.path.exists(rf_model_path):
-    try:
-        with open(rf_model_path, 'rb') as f:
-            rf_model = pickle.load(f)
-        print("✓ Random Forest model loaded from local file")
-    except Exception as e:
-        print(f"⚠ Random Forest model load error: {e}")
-else:
-    print("⚠ Random Forest model disabled (too large for Railway free tier - 512MB RAM limit)")
-    print("   To enable: upload model file directly or upgrade Railway plan")
+# Try to download and load optimized model from Google Drive
+try:
+    if ensure_model_exists(rf_model_path, GDRIVE_RF_MODEL):
+        import joblib
+        rf_model = joblib.load(rf_model_path)
+        print(f"✓ Random Forest model loaded: {len(rf_model.estimators_)} trees")
+    else:
+        print("⚠ Random Forest model not available")
+        print("   Upload optimized model to Google Drive and set GDRIVE_RF_MODEL variable")
+except Exception as e:
+    print(f"⚠ Random Forest model error: {e}")
 
-if os.path.exists(encoders_path):
-    try:
-        with open(encoders_path, 'rb') as f:
-            model_encoders = pickle.load(f)
-        print("✓ Model encoders loaded from local file")
-    except Exception as e:
-        print(f"⚠ Model encoders load error: {e}")
-else:
-    print("⚠ Model encoders not available")
+try:
+    if ensure_model_exists(encoders_path, GDRIVE_ENCODERS):
+        import joblib
+        model_encoders = joblib.load(encoders_path)
+        print("✓ Model encoders loaded")
+    else:
+        print("⚠ Model encoders not available")
+except Exception as e:
+    print(f"⚠ Model encoders error: {e}")
 
 # Load Sensor Data
 detectors_df = None
