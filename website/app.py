@@ -22,50 +22,29 @@ BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 # HELPER FUNCTIONS
 # ============================================================================
 def download_file_from_google_drive(file_id, destination):
-    """Download file from Google Drive (handles large files with virus scan)"""
-    import requests
-    
-    # Try direct download first
-    URL = f"https://drive.google.com/uc?export=download&id={file_id}"
-    
-    session = requests.Session()
-    response = session.get(URL, stream=True)
-    
-    # Check if we need to handle virus scan warning (for large files >25MB)
-    token = None
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            token = value
-            break
-    
-    if token:
-        # Confirm download for large files
-        URL = f"https://drive.google.com/uc?export=download&id={file_id}&confirm={token}"
-        response = session.get(URL, stream=True)
-    
-    # Save file
-    CHUNK_SIZE = 32768
-    with open(destination, 'wb') as f:
-        for chunk in response.iter_content(CHUNK_SIZE):
-            if chunk:
-                f.write(chunk)
-    
-    print(f"✓ Downloaded: {os.path.basename(destination)} ({os.path.getsize(destination):,} bytes)")
-
-def get_confirm_token(response):
-    """Get confirm token for large files"""
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            return value
-    return None
-
-def save_response_content(response, destination):
-    """Save downloaded content to file"""
-    CHUNK_SIZE = 32768
-    with open(destination, 'wb') as f:
-        for chunk in response.iter_content(CHUNK_SIZE):
-            if chunk:
-                f.write(chunk)
+    """Download file from Google Drive using gdown (handles large files reliably)"""
+    try:
+        import gdown
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, destination, quiet=False)
+        
+        # Verify download
+        if os.path.exists(destination):
+            size = os.path.getsize(destination)
+            print(f"✓ Downloaded: {os.path.basename(destination)} ({size:,} bytes)")
+            
+            # Check if it's actually HTML (failed download)
+            with open(destination, 'rb') as f:
+                header = f.read(100)
+                if header.startswith(b'<!DOCTYPE') or header.startswith(b'<html'):
+                    print(f"❌ Download failed: received HTML instead of file")
+                    os.remove(destination)
+                    return False
+            return True
+        return False
+    except Exception as e:
+        print(f"❌ Download error: {e}")
+        return False
 
 def ensure_model_exists(file_path, gdrive_id=None):
     """Check if model exists, if not download from Google Drive"""
@@ -73,10 +52,10 @@ def ensure_model_exists(file_path, gdrive_id=None):
         return True
     
     if gdrive_id:
-        print(f"⚠ {file_path} not found, downloading from Google Drive...")
+        print(f"⚠ {os.path.basename(file_path)} not found, downloading from Google Drive...")
         try:
-            download_file_from_google_drive(gdrive_id, file_path)
-            return True
+            success = download_file_from_google_drive(gdrive_id, file_path)
+            return success
         except Exception as e:
             print(f"❌ Failed to download: {e}")
             return False
