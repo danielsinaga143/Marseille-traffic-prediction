@@ -22,21 +22,50 @@ BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 # HELPER FUNCTIONS
 # ============================================================================
 def download_file_from_google_drive(file_id, destination):
-    """Download file from Google Drive"""
+    """Download file from Google Drive (handles large files with virus scan)"""
     import requests
     
-    URL = "https://drive.google.com/uc?export=download&confirm=1"
-    session = requests.Session()
+    # Try direct download first
+    URL = f"https://drive.google.com/uc?export=download&id={file_id}"
     
-    response = session.get(URL, params={'id': file_id}, stream=True)
+    session = requests.Session()
+    response = session.get(URL, stream=True)
+    
+    # Check if we need to handle virus scan warning (for large files >25MB)
+    token = None
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            token = value
+            break
+    
+    if token:
+        # Confirm download for large files
+        URL = f"https://drive.google.com/uc?export=download&id={file_id}&confirm={token}"
+        response = session.get(URL, stream=True)
     
     # Save file
+    CHUNK_SIZE = 32768
     with open(destination, 'wb') as f:
-        for chunk in response.iter_content(chunk_size=32768):
+        for chunk in response.iter_content(CHUNK_SIZE):
             if chunk:
                 f.write(chunk)
     
-    print(f"✓ Downloaded: {destination}")
+    print(f"✓ Downloaded: {os.path.basename(destination)} ({os.path.getsize(destination):,} bytes)")
+
+def get_confirm_token(response):
+    """Get confirm token for large files"""
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            return value
+    return None
+
+def save_response_content(response, destination):
+    """Save downloaded content to file"""
+    CHUNK_SIZE = 32768
+    with open(destination, 'wb') as f:
+        for chunk in response.iter_content(CHUNK_SIZE):
+            if chunk:
+                f.write(chunk)
 
 def ensure_model_exists(file_path, gdrive_id=None):
     """Check if model exists, if not download from Google Drive"""
