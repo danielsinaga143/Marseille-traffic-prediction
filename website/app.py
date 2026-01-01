@@ -122,11 +122,9 @@ try:
         # Pre-compute hourly averages per detector
         detector_hourly_avg = traffic_df.groupby(['detid', 'hour', 'day_of_week'])['occ'].mean().reset_index()
         detector_hourly_avg.columns = ['detid', 'hour', 'day_of_week', 'avg_occ']
-        print(f"✓ Traffic data loaded: {len(traffic_df)} records")
+        print(f"✓ Traffic data loaded: {len(traffic_df):,} records")
     else:
         print("⚠ marseille_clean.csv not available (set GDRIVE_MARSEILLE_DATA env variable)")
-    
-    print(f"✓ Traffic data loaded: {len(traffic_df):,} records")
 except Exception as e:
     print(f"⚠ Traffic data not found: {e}")
 
