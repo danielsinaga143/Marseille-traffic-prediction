@@ -76,34 +76,41 @@ GDRIVE_RF_MODEL = os.environ.get('GDRIVE_RF_MODEL', '')  # Google Drive ID untuk
 GDRIVE_ENCODERS = os.environ.get('GDRIVE_ENCODERS', '')  # Google Drive ID untuk model_encoders_revised.pkl
 GDRIVE_MARSEILLE_DATA = os.environ.get('GDRIVE_MARSEILLE_DATA', '')  # Google Drive ID untuk marseille_clean.csv
 
-# Load Random Forest Model
+# Disable RF model auto-download on Railway (too large for 512MB RAM free tier)
+ENABLE_RF_MODEL = os.environ.get('ENABLE_RF_MODEL', 'false').lower() == 'true'
+
+# Load Random Forest Model (DISABLED by default due to 3GB size)
 rf_model = None
 model_encoders = None
 
 rf_model_path = os.path.join(BASE_PATH, 'traffic_model_time_location.pkl')
 encoders_path = os.path.join(BASE_PATH, 'model_encoders_revised.pkl')
 
-try:
-    # Try to load or download RF model
-    if ensure_model_exists(rf_model_path, GDRIVE_RF_MODEL):
-        with open(rf_model_path, 'rb') as f:
-            rf_model = pickle.load(f)
-        print("✓ Random Forest model loaded")
-    else:
-        print("⚠ Random Forest model not available (set GDRIVE_RF_MODEL env variable)")
-except Exception as e:
-    print(f"⚠ Random Forest model error: {e}")
+if ENABLE_RF_MODEL:
+    try:
+        # Try to load or download RF model (only if ENABLE_RF_MODEL=true)
+        if ensure_model_exists(rf_model_path, GDRIVE_RF_MODEL):
+            with open(rf_model_path, 'rb') as f:
+                rf_model = pickle.load(f)
+            print("✓ Random Forest model loaded")
+        else:
+            print("⚠ Random Forest model not available (set GDRIVE_RF_MODEL env variable)")
+    except Exception as e:
+        print(f"⚠ Random Forest model error: {e}")
 
-try:
-    # Try to load or download encoders
-    if ensure_model_exists(encoders_path, GDRIVE_ENCODERS):
-        with open(encoders_path, 'rb') as f:
-            model_encoders = pickle.load(f)
-        print("✓ Model encoders loaded")
-    else:
-        print("⚠ Model encoders not available (set GDRIVE_ENCODERS env variable)")
-except Exception as e:
-    print(f"⚠ Model encoders error: {e}")
+    try:
+        # Try to load or download encoders
+        if ensure_model_exists(encoders_path, GDRIVE_ENCODERS):
+            with open(encoders_path, 'rb') as f:
+                model_encoders = pickle.load(f)
+            print("✓ Model encoders loaded")
+        else:
+            print("⚠ Model encoders not available (set GDRIVE_ENCODERS env variable)")
+    except Exception as e:
+        print(f"⚠ Model encoders error: {e}")
+else:
+    print("⚠ Random Forest model DISABLED (set ENABLE_RF_MODEL=true to enable)")
+    print("   Note: RF model requires >4GB RAM (Railway free tier has 512MB)")
 
 # Load Sensor Data
 detectors_df = None
