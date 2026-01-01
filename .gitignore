@@ -45,9 +45,8 @@ ENV/
 *.h5
 *.model
 
-# Data files (optional - depending on size)
+# Data files (large files only)
 marseille_clean.csv
-sensor_predictions_*.csv
 
 # HTML outputs
 traffic_map_*.html
