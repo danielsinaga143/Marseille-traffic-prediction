@@ -17,7 +17,7 @@ Marseille/
 │   ├── requirements.txt       # Dependencies Python
 │   └── templates/
 │       └── index.html         # Frontend dashboard
-├── model.ipynb          # Jupyter notebook untuk training model
+├── model.ipynb                # Jupyter notebook untuk training model
 ├── detectors_public.csv       # Data lokasi 169 sensor Marseille
 ├── traffic_model_time_location.pkl     # Model Random Forest
 ├── model_encoders_revised.pkl          # Encoders untuk preprocessing
